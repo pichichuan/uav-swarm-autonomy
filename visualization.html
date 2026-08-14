@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>多无人机协同演示</title>
+<style>
+body{margin:0;background:#0e1726;color:#dce8f5;font:16px system-ui;display:grid;place-items:center;height:100vh}canvas{border:1px solid #31445e;border-radius:12px;background:#17263a;box-shadow:0 16px 45px #0008}.legend{position:fixed;top:20px;left:24px;line-height:1.7}.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px}.title{font-size:22px;font-weight:700}
+</style><body><div class="legend"><div class="title">多无人机自主建图、识别、避障与协同</div><span class="dot" style="background:#29d3c5"></span>UAV-1　<span class="dot" style="background:#c38aff"></span>UAV-2　<span class="dot" style="background:#ef5b49"></span>静态障碍　<span class="dot" style="background:#4d9bff"></span>动态行人<br><span id="state">初始化中…</span></div><canvas id="c" width="1060" height="720"></canvas>
+<script>
+const c=document.querySelector('#c'),x=c.getContext('2d'),state=document.querySelector('#state'); const S=100, O={x:150,y:400};
+let t=0, d=[{x:0,y:-1.5,g:[7,-1.45],col:'#29d3c5',n:'UAV-1'},{x:0,y:1.5,g:[7,1.45],col:'#c38aff',n:'UAV-2'}]; const fixed=[{x:3.2,y:0,r:.72},{x:5.55,y:1.85,r:.45}];
+function p(q){return [O.x+q.x*S,O.y-q.y*S]} function circle(q,r,col){let a=p(q);x.fillStyle=col;x.beginPath();x.arc(a[0],a[1],r*S,0,7);x.fill()}
+function step(){t+=.025;let phase=(t*.72)%7.2,py=-2.4+(phase<=3.6?phase:7.2-phase),pv=phase<=3.6?.72:-.72,person={x:4.6,y:py,r:.3};let avoiding=false;
+d.forEach((u,i)=>{let dx=u.g[0]-u.x,dy=u.g[1]-u.y,L=Math.hypot(dx,dy),vx=1.35*dx/L,vy=1.35*dy/L;[...fixed,person].forEach(o=>{let qx=o.x+(o===person?pv*1.2:0),qy=o.y,rx=u.x-qx,ry=u.y-qy,R=Math.hypot(rx,ry),b=1.15+o.r;if(R<b){let k=1.8*(b-R)/b;vx+=k*rx/R;vy+=k*ry/R;if(o===person)avoiding=true}});let peer=d[1-i],rx=u.x-peer.x,ry=u.y-peer.y,R=Math.hypot(rx,ry);if(R<1){vx+=1.6*(1-R)*rx/R;vy+=1.6*(1-R)*ry/R}L=Math.hypot(vx,vy);if(L>1.55){vx*=1.55/L;vy*=1.55/L}u.x+=vx*.025;u.y+=vy*.025});draw(person,avoiding);requestAnimationFrame(step)}
+function draw(person,avoiding){x.clearRect(0,0,c.width,c.height);x.strokeStyle='#29415c';for(let i=0;i<10;i++){x.beginPath();x.moveTo(O.x+i*S,O.y-3*S);x.lineTo(O.x+i*S,O.y+3*S);x.stroke()}for(let j=-3;j<=3;j++){x.beginPath();x.moveTo(O.x,O.y-j*S);x.lineTo(O.x+8*S,O.y-j*S);x.stroke()}fixed.forEach(o=>circle(o,o.r,'#ef5b49'));circle(person,person.r,'#4d9bff');let pp=p(person);x.fillStyle='#dce8f5';x.fillText('动态识别目标',pp[0]-42,pp[1]-42);d.forEach(u=>{let a=p(u),g=p({x:u.g[0],y:u.g[1]});x.strokeStyle=u.col;x.setLineDash([6,5]);x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(g[0],g[1]);x.stroke();x.setLineDash([]);circle(u,.18,u.col);x.fillStyle='#0e1726';x.fillText('▲',a[0]-5,a[1]+5);x.fillStyle='#dce8f5';x.fillText(u.n,a[0]-24,a[1]-26);x.strokeStyle='#74e890';x.beginPath();x.arc(g[0],g[1],12,0,7);x.stroke()});state.textContent=avoiding?'动态障碍预测避让：激活':'A* 任务跟踪：正常';}
+step();
+</script></body></html>
