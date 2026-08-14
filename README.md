@@ -2,6 +2,12 @@
 
 一个面向 PX4 + ROS 2 的可扩展项目骨架。仓库内置纯 Python 多机仿真，因此不需要飞控、Docker 或 GPU 也能验证核心闭环；适配层为 PX4、YOLO、KISS-ICP/VINS-Fusion、Fast-Planner、EGO-Planner-v2 与 Zenoh 留出明确接口。
 
+## MuJoCo 三维演示
+
+![MuJoCo 双无人机动态避障](assets/mujoco_swarm_avoidance.gif)
+
+该动画由 MuJoCo 实际渲染：两架不同高度的四旋翼绕开红色建筑，识别并预测蓝色动态行人，并保持机间间距。执行 `python tools/render_mujoco_demo.py` 可重新生成。
+
 ## 已可运行的闭环
 
 ```text
