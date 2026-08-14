@@ -10,6 +10,8 @@
 
 无人机视觉模型采用 [Bitcraze Crazyflie 2.1 仿真网格](https://github.com/bitcraze/crazyflie-simulation)，MIT 许可；完整归属说明见 `third_party/crazyflie_2_1/NOTICE.md`。
 
+完整算法说明见 [docs/algorithm_analysis.md](docs/algorithm_analysis.md)，ROS 2 / PX4 话题接入边界见 [docs/integration.md](docs/integration.md)。
+
 原生 MuJoCo 交互窗口：`python tools/run_mujoco_viewer.py`。此模式由物理自由刚体、重力补偿 PD 外力控制、MuJoCo 接触检测和 `mj_step` 驱动；避障只修改速度参考，不会直接写入无人机位置。
 
 ## 已可运行的闭环
