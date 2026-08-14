@@ -6,7 +6,7 @@
 
 ![MuJoCo 双无人机动态避障](assets/mujoco_swarm_avoidance.gif)
 
-该动画由 MuJoCo 实际渲染：两架不同高度的四旋翼绕开红色建筑，识别并预测蓝色动态行人，并保持机间间距。执行 `python tools/render_mujoco_demo.py` 可重新生成。
+该动画由 MuJoCo 实际渲染：两架不同高度的四旋翼绕开通信塔，识别并预测蓝色动态行人，并保持机间间距。当 UAV-1 对动态行人让行时，它会广播状态，UAV-2 随即临时爬升 0.55 m 实现航层解冲突；动画标题会显示 `PEER ALTITUDE DECONFLICTION`。执行 `python tools/render_mujoco_demo.py` 可重新生成。
 
 无人机视觉模型采用 [Bitcraze Crazyflie 2.1 仿真网格](https://github.com/bitcraze/crazyflie-simulation)，MIT 许可；完整归属说明见 `third_party/crazyflie_2_1/NOTICE.md`。
 

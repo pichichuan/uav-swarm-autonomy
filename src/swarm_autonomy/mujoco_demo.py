@@ -12,6 +12,7 @@ class MujocoMissionResult:
     success: bool
     collisions: int
     dynamic_interventions: int
+    coordination_events: int
     elapsed_s: float
 
 
@@ -55,7 +56,8 @@ def run_mujoco_mission(duration_s: float = 18.0, capture=None) -> MujocoMissionR
     dof = {name: int(model.jnt_dofadr[model.joint(f"{name}_free").id]) for name in paths}
     mass = {name: float(model.body_mass[body_ids[name]]) for name in paths}
     mocap_id = int(model.body("dynamic_person").mocapid[0])
-    interventions = collisions = 0
+    interventions = collisions = coordination_events = 0
+    coordination_active = False
     while data.time < duration_s:
         phase = (data.time * .8) % 8.0
         person_y = -2.35 + (phase if phase <= 4.0 else 8.0 - phase)
@@ -64,7 +66,7 @@ def run_mujoco_mission(duration_s: float = 18.0, capture=None) -> MujocoMissionR
         positions = {name: data.body(name).xpos.copy() for name in paths}
         velocities = {name: data.qvel[dof[name]:dof[name] + 3].copy() for name in paths}
         data.xfrc_applied[:] = 0.0
-        commands = {}
+        commands, active_by_name, altitude_targets = {}, {}, {}
         for name in paths:
             target = paths[name][indices[name]]
             offset = target - positions[name]
@@ -77,6 +79,7 @@ def run_mujoco_mission(duration_s: float = 18.0, capture=None) -> MujocoMissionR
             separation = positions[name] - predicted_person
             distance = np.linalg.norm(separation[:2])
             active = distance < 1.45
+            active_by_name[name] = active
             if active:
                 desired += 1.6 * separation / max(distance, .1)
                 interventions += 1
@@ -90,17 +93,30 @@ def run_mujoco_mission(duration_s: float = 18.0, capture=None) -> MujocoMissionR
             if speed > 1.45:
                 desired *= 1.45 / speed
             commands[name] = desired
+            altitude_targets[name] = target[2]
+        # Peer-state exchange: whichever UAV first has to yield to the dynamic
+        # person broadcasts a conflict flag. Its peer receives a temporary
+        # altitude-separation request. This is a visible multi-robot
+        # coordination action, not a pre-scripted route.
+        coordination_now = any(active_by_name.values())
+        if coordination_now:
+            requesting_uav = next(name for name, is_active in active_by_name.items() if is_active)
+            peer_uav = "uav_2" if requesting_uav == "uav_1" else "uav_1"
+            altitude_targets[peer_uav] += 0.55
+        if coordination_now and not coordination_active:
+            coordination_events += 1
+        coordination_active = coordination_now
         for name in paths:
             # Translational PD controller.  This is the only actuation path:
             # MuJoCo integrates the free rigid bodies and resolves contacts.
             position, velocity = positions[name], velocities[name]
             horizontal = 3.2 * (commands[name][:2] - velocity[:2])
             horizontal = np.clip(horizontal, -5.5, 5.5)
-            vertical = 8.0 * (paths[name][indices[name]][2] - position[2]) - 4.5 * velocity[2]
+            vertical = 8.0 * (altitude_targets[name] - position[2]) - 4.5 * velocity[2]
             force = mass[name] * np.array((horizontal[0], horizontal[1], 9.81 + vertical))
             data.xfrc_applied[body_ids[name], :3] = force
         if capture is not None:
-            capture(model, data, active)
+            capture(model, data, coordination_now)
         mujoco.mj_step(model, data)
         # Contacts are evaluated by MuJoCo, rather than inferred from planned poses.
         for contact_index in range(data.ncon):
@@ -111,4 +127,4 @@ def run_mujoco_mission(duration_s: float = 18.0, capture=None) -> MujocoMissionR
                 collisions += 1
     final_positions = {name: data.body(name).xpos.copy() for name in paths}
     success = all(np.linalg.norm(final_positions[name] - paths[name][-1]) < .48 for name in paths) and collisions == 0
-    return MujocoMissionResult(success, collisions, interventions, round(float(data.time), 2))
+    return MujocoMissionResult(success, collisions, interventions, coordination_events, round(float(data.time), 2))

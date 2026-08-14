@@ -14,6 +14,7 @@ class MujocoMissionTests(unittest.TestCase):
         self.assertTrue(result.success, result)
         self.assertEqual(result.collisions, 0)
         self.assertGreater(result.dynamic_interventions, 0)
+        self.assertGreater(result.coordination_events, 0)
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ def capture(model, data, active):
     renderer.update_scene(data, camera=camera)
     image = Image.fromarray(renderer.render())
     draw = ImageDraw.Draw(image)
-    draw.text((20, 18), "MuJoCo multi-UAV mapping / perception / avoidance | " + ("DYNAMIC AVOIDANCE" if active else "COORDINATED FLIGHT"), fill="white")
+    draw.text((20, 18), "MuJoCo multi-UAV mapping / perception / avoidance | " + ("PEER ALTITUDE DECONFLICTION" if active else "COORDINATED FLIGHT"), fill="white")
     frames.append(image)
 result = run_mujoco_mission(capture=capture)
 if renderer: renderer.close()
