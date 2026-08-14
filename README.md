@@ -8,6 +8,8 @@
 
 该动画由 MuJoCo 实际渲染：两架不同高度的四旋翼绕开红色建筑，识别并预测蓝色动态行人，并保持机间间距。执行 `python tools/render_mujoco_demo.py` 可重新生成。
 
+无人机视觉模型采用 [Bitcraze Crazyflie 2.1 仿真网格](https://github.com/bitcraze/crazyflie-simulation)，MIT 许可；完整归属说明见 `third_party/crazyflie-simulation/NOTICE.md`。
+
 原生 MuJoCo 交互窗口：`python tools/run_mujoco_viewer.py`。此模式由物理自由刚体、重力补偿 PD 外力控制、MuJoCo 接触检测和 `mj_step` 驱动；避障只修改速度参考，不会直接写入无人机位置。
 
 ## 已可运行的闭环
