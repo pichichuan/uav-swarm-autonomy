@@ -22,7 +22,7 @@ def build_xml() -> str:
           <geom name="{name}_crazyflie_visual" type="mesh" mesh="crazyflie_2_1" pos="0 0 -.045" rgba="{color}" contype="0" conaffinity="0"/></body>'''
         for name, y, z, color in (("uav_1", -1.1, 1.35, ".08 .75 .68 1"), ("uav_2", 1.1, 1.70, ".72 .46 .96 1"))
     )
-    return f'''<mujoco model="multi_uav_autonomy"><compiler meshdir="third_party/crazyflie-simulation/meshes/stl_files"/><option timestep=".01" gravity="0 0 -9.81" integrator="implicitfast" solver="Newton"/>
+    return f'''<mujoco model="multi_uav_autonomy"><compiler meshdir="third_party/crazyflie_2_1"/><option timestep=".01" gravity="0 0 -9.81" integrator="implicitfast" solver="Newton"/>
       <asset><mesh name="crazyflie_2_1" file="cf2_assembly.stl" scale="4 4 4"/></asset>
       <visual><global offwidth="900" offheight="600"/><headlight ambient=".35 .35 .35" diffuse=".65 .65 .65"/></visual>
       <worldbody><light pos="0 -2 8" dir="0 0 -1" directional="true"/><geom name="ground" type="plane" size="12 12 .1" rgba=".11 .17 .23 1"/>

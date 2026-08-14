@@ -2,11 +2,4 @@
 __pycache__/
 *.py[cod]
 artifacts/*.json
-third_party/crazyflie-simulation/*
-!third_party/crazyflie-simulation/LICENSE
-!third_party/crazyflie-simulation/NOTICE.md
-!third_party/crazyflie-simulation/meshes/
-third_party/crazyflie-simulation/meshes/*
-!third_party/crazyflie-simulation/meshes/stl_files/
-third_party/crazyflie-simulation/meshes/stl_files/*
-!third_party/crazyflie-simulation/meshes/stl_files/cf2_assembly.stl
+third_party/crazyflie-simulation/
