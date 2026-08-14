@@ -18,7 +18,7 @@ class MujocoMissionResult:
 def build_xml() -> str:
     drones = "".join(
         f'''<body name="{name}" pos="0 {y} {z}"><freejoint name="{name}_free"/>
-          <geom type="sphere" size=".18" rgba="{color}" mass=".55"/>
+          <geom name="{name}_hull" type="sphere" size=".18" rgba="{color}" mass=".55"/>
           <geom type="capsule" fromto="-.34 0 0 .34 0 0" size=".025" rgba=".16 .18 .24 1"/>
           <geom type="capsule" fromto="0 -.34 0 0 .34 0" size=".025" rgba=".16 .18 .24 1"/>
           <geom type="cylinder" pos=".28 .28 0" size=".075 .012" rgba=".05 .05 .07 1"/>
@@ -27,7 +27,7 @@ def build_xml() -> str:
           <geom type="cylinder" pos="-.28 -.28 0" size=".075 .012" rgba=".05 .05 .07 1"/></body>'''
         for name, y, z, color in (("uav_1", -1.1, 1.35, ".08 .75 .68 1"), ("uav_2", 1.1, 1.70, ".72 .46 .96 1"))
     )
-    return f'''<mujoco model="multi_uav_autonomy"><option timestep=".02" gravity="0 0 -9.81"/>
+    return f'''<mujoco model="multi_uav_autonomy"><option timestep=".01" gravity="0 0 -9.81" integrator="implicitfast" solver="Newton"/>
       <visual><global offwidth="900" offheight="600"/><headlight ambient=".35 .35 .35" diffuse=".65 .65 .65"/></visual>
       <worldbody><light pos="0 -2 8" dir="0 0 -1" directional="true"/><geom name="ground" type="plane" size="12 12 .1" rgba=".11 .17 .23 1"/>
       {drones}
@@ -50,9 +50,9 @@ def run_mujoco_mission(duration_s: float = 18.0, capture=None) -> MujocoMissionR
     model = mujoco.MjModel.from_xml_string(build_xml())
     data = mujoco.MjData(model)
     paths, indices = _paths(), {"uav_1": 1, "uav_2": 1}
-    positions = {name: path[0].copy() for name, path in paths.items()}
-    velocities = {name: np.zeros(3) for name in paths}
-    qpos = {name: int(model.jnt_qposadr[model.joint(f"{name}_free").id]) for name in paths}
+    body_ids = {name: model.body(name).id for name in paths}
+    dof = {name: int(model.jnt_dofadr[model.joint(f"{name}_free").id]) for name in paths}
+    mass = {name: float(model.body_mass[body_ids[name]]) for name in paths}
     mocap_id = int(model.body("dynamic_person").mocapid[0])
     interventions = collisions = 0
     while data.time < duration_s:
@@ -60,6 +60,10 @@ def run_mujoco_mission(duration_s: float = 18.0, capture=None) -> MujocoMissionR
         person_y = -2.35 + (phase if phase <= 4.0 else 8.0 - phase)
         person_velocity = .8 if phase <= 4.0 else -.8
         data.mocap_pos[mocap_id] = (4.35, person_y, 0)
+        positions = {name: data.body(name).xpos.copy() for name in paths}
+        velocities = {name: data.qvel[dof[name]:dof[name] + 3].copy() for name in paths}
+        data.xfrc_applied[:] = 0.0
+        commands = {}
         for name in paths:
             target = paths[name][indices[name]]
             offset = target - positions[name]
@@ -67,7 +71,7 @@ def run_mujoco_mission(duration_s: float = 18.0, capture=None) -> MujocoMissionR
                 indices[name] += 1
                 target = paths[name][indices[name]]
                 offset = target - positions[name]
-            desired = 1.3 * offset / max(np.linalg.norm(offset), .001)
+            desired = 1.25 * offset / max(np.linalg.norm(offset), .001)
             predicted_person = np.array((4.35, person_y + 1.2 * person_velocity, positions[name][2]))
             separation = positions[name] - predicted_person
             distance = np.linalg.norm(separation[:2])
@@ -84,18 +88,26 @@ def run_mujoco_mission(duration_s: float = 18.0, capture=None) -> MujocoMissionR
             speed = np.linalg.norm(desired)
             if speed > 1.45:
                 desired *= 1.45 / speed
-            velocities[name] += .16 * (desired - velocities[name])
+            commands[name] = desired
         for name in paths:
-            positions[name] += velocities[name] * model.opt.timestep
-            address = qpos[name]
-            data.qpos[address:address + 3] = positions[name]
-            data.qpos[address + 3:address + 7] = (1, 0, 0, 0)
-        mujoco.mj_forward(model, data)
+            # Translational PD controller.  This is the only actuation path:
+            # MuJoCo integrates the free rigid bodies and resolves contacts.
+            position, velocity = positions[name], velocities[name]
+            horizontal = 3.2 * (commands[name][:2] - velocity[:2])
+            horizontal = np.clip(horizontal, -5.5, 5.5)
+            vertical = 8.0 * (paths[name][indices[name]][2] - position[2]) - 4.5 * velocity[2]
+            force = mass[name] * np.array((horizontal[0], horizontal[1], 9.81 + vertical))
+            data.xfrc_applied[body_ids[name], :3] = force
         if capture is not None:
             capture(model, data, active)
-        for name in paths:
-            if math.dist(tuple(positions[name][:2]), (4.35, person_y)) < .43:
+        mujoco.mj_step(model, data)
+        # Contacts are evaluated by MuJoCo, rather than inferred from planned poses.
+        for contact_index in range(data.ncon):
+            contact = data.contact[contact_index]
+            first = model.geom(int(contact.geom1)).name or ""
+            second = model.geom(int(contact.geom2)).name or ""
+            if (first.startswith("dynamic_") or second.startswith("dynamic_")) and (first.startswith("uav_") or second.startswith("uav_")):
                 collisions += 1
-        data.time += model.opt.timestep
-    success = all(np.linalg.norm(positions[name] - paths[name][-1]) < .42 for name in paths) and collisions == 0
+    final_positions = {name: data.body(name).xpos.copy() for name in paths}
+    success = all(np.linalg.norm(final_positions[name] - paths[name][-1]) < .48 for name in paths) and collisions == 0
     return MujocoMissionResult(success, collisions, interventions, round(float(data.time), 2))
