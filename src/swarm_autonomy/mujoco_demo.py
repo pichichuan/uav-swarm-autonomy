@@ -31,8 +31,13 @@ def build_xml() -> str:
       <visual><global offwidth="900" offheight="600"/><headlight ambient=".35 .35 .35" diffuse=".65 .65 .65"/></visual>
       <worldbody><light pos="0 -2 8" dir="0 0 -1" directional="true"/><geom name="ground" type="plane" size="12 12 .1" rgba=".11 .17 .23 1"/>
       {drones}
-      <geom name="central_building" type="box" pos="3.2 0 1.15" size=".5 1.15 1.15" rgba=".90 .25 .18 1"/>
-      <geom name="north_building" type="box" pos="5.45 2.35 .8" size=".42 .42 .8" rgba=".90 .25 .18 1"/>
+      <geom name="central_building" type="cylinder" pos="3.2 0 1.35" size=".62 1.35" rgba=".20 .28 .34 1"/>
+      <geom name="central_tower_band_1" type="cylinder" pos="3.2 0 .65" size=".68 .07" rgba=".98 .68 .08 1" contype="0" conaffinity="0"/>
+      <geom name="central_tower_band_2" type="cylinder" pos="3.2 0 1.65" size=".68 .07" rgba=".98 .68 .08 1" contype="0" conaffinity="0"/>
+      <geom name="central_tower_beacon" type="sphere" pos="3.2 0 2.78" size=".12" rgba=".20 .95 .72 1" contype="0" conaffinity="0"/>
+      <geom name="north_building" type="cylinder" pos="5.45 2.35 1.05" size=".38 1.05" rgba=".28 .36 .45 1"/>
+      <geom name="north_tower_ring" type="cylinder" pos="5.45 2.35 1.45" size=".43 .06" rgba=".32 .82 .98 1" contype="0" conaffinity="0"/>
+      <geom name="north_tower_beacon" type="sphere" pos="5.45 2.35 2.2" size=".10" rgba=".20 .95 .72 1" contype="0" conaffinity="0"/>
       <body name="dynamic_person" mocap="true" pos="4.35 -2.35 0"><geom name="dynamic_collision" type="cylinder" size=".25 .85" pos="0 0 .85" rgba="0 0 0 0"/>
       <geom name="person_body" type="capsule" fromto="0 0 .2 0 0 1.45" size=".16" rgba=".12 .42 .98 1" contype="0" conaffinity="0"/>
       <geom name="person_head" type="sphere" pos="0 0 1.72" size=".14" rgba=".97 .72 .52 1" contype="0" conaffinity="0"/></body>
